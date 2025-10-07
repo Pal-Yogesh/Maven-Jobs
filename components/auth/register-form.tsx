@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,7 @@ import { GoogleButton } from "@/components/auth/google-button"
 import axios from "axios"
 
 export function RegisterForm() {
+    const pathname = usePathname();
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -168,7 +169,9 @@ export function RegisterForm() {
 
           <p className="text-xs text-muted-foreground text-center">
             Already registered?{" "}
-            <Link href="/login" className="text-primary underline underline-offset-4">
+            <Link 
+            href={pathname === "/register" ? "/login" : "/recruiter/login"}
+            className="text-primary underline underline-offset-4">
               Login here
             </Link>
           </p>

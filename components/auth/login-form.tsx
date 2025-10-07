@@ -3,7 +3,7 @@
 import type React from "react";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -22,6 +22,7 @@ import toast from "react-hot-toast";
 
 export function LoginForm() {
   const router = useRouter();
+  const pathname = usePathname();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +101,7 @@ export function LoginForm() {
           <p className="text-xs text-muted-foreground text-center">
             New to our platform?{" "}
             <Link
-              href="/register"
+              href={pathname === "/login" ? "/register" : "/recruiter/register"}
               className="text-primary underline underline-offset-4"
             >
               Register now
