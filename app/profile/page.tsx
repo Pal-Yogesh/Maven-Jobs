@@ -1,69 +1,58 @@
-"use client";
+"use client"
 
-import type React from "react";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useSession } from "next-auth/react";
-import { Navbar } from "@/components/navbar";
+import type React from "react"
+import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { useSession } from "next-auth/react"
+import { useToast } from "@/hooks/use-toast"
+import axios from "axios"
+import { Navbar } from "@/components/navbar"
 
-// Type definitions (moved from local-db)
+// Type definitions
 export type CandidateProfile = {
-  summary?: string;
+  summary?: string
   personal?: {
-    fullName?: string;
-    email?: string;
-    mobile?: string;
-    location?: string;
-    totalExperience?: string;
-    noticePeriod?: string;
-  };
-  skills?: string[];
+    fullName?: string
+    email?: string
+    mobile?: string
+    location?: string
+    totalExperience?: string
+    noticePeriod?: string
+  }
+  skills?: string[]
   employment?: Array<{
-    company: string;
-    designation: string;
-    from: string;
-    to?: string;
-    current?: boolean;
-    description?: string;
-  }>;
+    company: string
+    designation: string
+    from: string
+    to?: string
+    current?: boolean
+    description?: string
+  }>
   education?: Array<{
-    degree: string;
-    institute: string;
-    from?: string;
-    to?: string;
-    current?: boolean;
-    description?: string;
-  }>;
-  projects?: Array<{
-    name: string;
-    role: string;
-    from: string;
-    to?: string;
-    description?: string;
-  }>;
-  certifications?: Array<{ name: string; authority: string; year: string }>;
-  resumeUrl?: string;
-};
+    degree: string
+    institute: string
+    from?: string
+    to?: string
+    current?: boolean
+    description?: string
+  }>
+  projects?: Array<{ name: string; role: string; from: string; to?: string; description?: string }>
+  certifications?: Array<{ name: string; authority: string; year: string }>
+  resumeUrl?: string
+}
 
-
-function SectionHeader({
-  title,
-  action,
-}: {
-  title: string;
-  action?: React.ReactNode;
-}) {
+function SectionHeader({ title, action }: { title: string; action?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
       <h3 className="text-lg font-semibold">{title}</h3>
       {action}
     </div>
-  );
+  )
 }
 
 function Sidebar({ completion }: { completion: number }) {
@@ -72,14 +61,9 @@ function Sidebar({ completion }: { completion: number }) {
       <div className="rounded-lg border bg-card p-4">
         <p className="text-sm text-muted-foreground">Profile completeness</p>
         <div className="mt-2 h-2 w-full rounded bg-muted">
-          <div
-            className="h-2 rounded bg-primary"
-            style={{ width: `${Math.min(100, Math.max(0, completion))}%` }}
-          />
+          <div className="h-2 rounded bg-primary" style={{ width: `${Math.min(100, Math.max(0, completion))}%` }} />
         </div>
-        <p className="mt-2 text-sm font-medium">
-          {Math.round(completion)}% complete
-        </p>
+        <p className="mt-2 text-sm font-medium">{Math.round(completion)}% complete</p>
       </div>
       <nav className="rounded-lg border bg-card p-4">
         <ul className="text-sm space-y-2">
@@ -126,49 +110,174 @@ function Sidebar({ completion }: { completion: number }) {
         </ul>
       </nav>
     </aside>
-  );
+  )
 }
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const { data: session, status } = useSession();
-  const user = session?.user;
-  console.log(user);
+  const router = useRouter()
+  const { data: session, status } = useSession()
+  const user = session?.user
+  const { toast } = useToast()
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
+      router.push("/login")
     }
-  }, [status, router]);
+  }, [status, router])
 
-  // Local profile state (not persisted - add API routes to save to database)
-  const [profile, setProfile] = useState<CandidateProfile>({});
-  // Helper function to update profile (local state only - TODO: add API route)
-  const updateProfile = (patch: Partial<CandidateProfile>) => {
-    setProfile((prev) => ({
-      ...prev,
+  const [profile, setProfile] = useState<CandidateProfile>({})
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Helper function to update profile
+  const updateProfile = async (patch: Partial<CandidateProfile>) => {
+    const updatedProfile = {
+      ...profile,
       ...patch,
-      personal: { ...(prev.personal || {}), ...(patch.personal || {}) },
-    }));
-    return profile;
-  };
+      personal: { ...(profile.personal || {}), ...(patch.personal || {}) }
+    }
+    
+    setProfile(updatedProfile)
+    
+    // Save to API
+    setIsSaving(true)
+    try {
+      const response = await axios.post('/api/profile', {
+        userId: user?.id,
+        profileData: {
+          summary: updatedProfile.summary,
+          fullName: updatedProfile.personal?.fullName,
+          mobile: updatedProfile.personal?.mobile,
+          location: updatedProfile.personal?.location,
+          totalExperience: updatedProfile.personal?.totalExperience,
+          noticePeriod: updatedProfile.personal?.noticePeriod,
+          resumeUrl: updatedProfile.resumeUrl
+        },
+        skills: updatedProfile.skills?.map(name => ({ name })) || [],
+        employments: updatedProfile.employment || [],
+        educations: updatedProfile.education || [],
+        projects: updatedProfile.projects || [],
+        certifications: updatedProfile.certifications || []
+      })
+      
+      const result = await response.data
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Profile saved successfully"
+        })
+      } else {
+        throw new Error(result.message)
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save profile data",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSaving(false)
+    }
+    
+    return updatedProfile
+  }
 
   const completion = useMemo(() => {
-    let c = 0;
-    if (profile.summary) c += 15;
-    if (profile.personal?.fullName && profile.personal?.email) c += 20;
-    if (profile.skills && profile.skills.length > 0) c += 15;
-    if (profile.employment && profile.employment.length > 0) c += 15;
-    if (profile.education && profile.education.length > 0) c += 10;
-    if (profile.projects && profile.projects.length > 0) c += 10;
-    if (profile.certifications && profile.certifications.length > 0) c += 10;
-    if (profile.resumeUrl) c += 5;
-    return Math.min(100, c);
-  }, [profile]);
+    let c = 0
+    if (profile.summary) c += 15
+    if (profile.personal?.fullName && profile.personal?.email) c += 20
+    if (profile.skills && profile.skills.length > 0) c += 15
+    if (profile.employment && profile.employment.length > 0) c += 15
+    if (profile.education && profile.education.length > 0) c += 10
+    if (profile.projects && profile.projects.length > 0) c += 10
+    if (profile.certifications && profile.certifications.length > 0) c += 10
+    if (profile.resumeUrl) c += 5
+    return Math.min(100, c)
+  }, [profile])
 
-  // if (!user) return null
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfileData()
+    }
+  }, [user?.id])
 
-  const noop = () => {};
+  const fetchProfileData = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/profile?userId=${user?.id}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        const { profile, skills, employments, educations, projects, certifications } = result.data
+        
+        setProfile({
+          summary: profile?.summary || "",
+          personal: {
+            fullName: profile?.fullName || "",
+            email: profile?.email || user?.email || "",
+            mobile: profile?.mobile || "",
+            location: profile?.location || "",
+            totalExperience: profile?.totalExperience || "",
+            noticePeriod: profile?.noticePeriod || ""
+          },
+          skills: skills?.map((s: any) => s.name) || [],
+          employment: employments?.map((emp: any) => ({
+            company: emp.company,
+            designation: emp.designation,
+            from: emp.from,
+            to: emp.to,
+            current: emp.current,
+            description: emp.description
+          })) || [],
+          education: educations?.map((edu: any) => ({
+            degree: edu.degree,
+            institute: edu.institute,
+            from: edu.from,
+            to: edu.to,
+            current: edu.current,
+            description: edu.description
+          })) || [],
+          projects: projects?.map((proj: any) => ({
+            name: proj.name,
+            role: proj.role,
+            from: proj.from,
+            to: proj.to,
+            description: proj.description
+          })) || [],
+          certifications: certifications?.map((cert: any) => ({
+            name: cert.name,
+            authority: cert.authority,
+            year: cert.year
+          })) || [],
+          resumeUrl: profile?.resumeUrl || ""
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load profile data",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <>
+        <Navbar />
+        <main className="container mx-auto py-8 flex justify-center">
+          <div className="text-center">
+            <p>Loading profile...</p>
+          </div>
+        </main>
+      </>
+    )
+  }
 
   return (
     <>
@@ -182,10 +291,10 @@ export default function ProfilePage() {
                 <SectionHeader title="Profile Summary" />
               </CardHeader>
               <CardContent>
-                <SummaryForm
-                  initialValue={profile.summary}
-                  onSaved={noop}
-                  updateProfile={updateProfile}
+                <SummaryForm 
+                  initialValue={profile.summary} 
+                  updateProfile={updateProfile} 
+                  isSaving={isSaving}
                 />
               </CardContent>
             </Card>
@@ -195,10 +304,10 @@ export default function ProfilePage() {
                 <SectionHeader title="Personal Details" />
               </CardHeader>
               <CardContent>
-                <PersonalForm
-                  initialValue={profile.personal}
-                  onSaved={noop}
-                  updateProfile={updateProfile}
+                <PersonalForm 
+                  initialValue={profile.personal} 
+                  updateProfile={updateProfile} 
+                  isSaving={isSaving}
                 />
               </CardContent>
             </Card>
@@ -208,10 +317,10 @@ export default function ProfilePage() {
                 <SectionHeader title="Key Skills" />
               </CardHeader>
               <CardContent>
-                <SkillsForm
-                  initialValue={profile.skills || []}
-                  onSaved={noop}
-                  updateProfile={updateProfile}
+                <SkillsForm 
+                  initialValue={profile.skills || []} 
+                  updateProfile={updateProfile} 
+                  isSaving={isSaving}
                 />
               </CardContent>
             </Card>
@@ -221,10 +330,10 @@ export default function ProfilePage() {
                 <SectionHeader title="Employment" />
               </CardHeader>
               <CardContent>
-                <EmploymentForm
-                  initialValue={profile.employment || []}
-                  onSaved={noop}
-                  updateProfile={updateProfile}
+                <EmploymentForm 
+                  initialValue={profile.employment || []} 
+                  updateProfile={updateProfile} 
+                  isSaving={isSaving}
                 />
               </CardContent>
             </Card>
@@ -234,10 +343,10 @@ export default function ProfilePage() {
                 <SectionHeader title="Education" />
               </CardHeader>
               <CardContent>
-                <EducationForm
-                  initialValue={profile.education || []}
-                  onSaved={noop}
-                  updateProfile={updateProfile}
+                <EducationForm 
+                  initialValue={profile.education || []} 
+                  updateProfile={updateProfile} 
+                  isSaving={isSaving}
                 />
               </CardContent>
             </Card>
@@ -247,10 +356,10 @@ export default function ProfilePage() {
                 <SectionHeader title="Projects" />
               </CardHeader>
               <CardContent>
-                <ProjectsForm
-                  initialValue={profile.projects || []}
-                  onSaved={noop}
-                  updateProfile={updateProfile}
+                <ProjectsForm 
+                  initialValue={profile.projects || []} 
+                  updateProfile={updateProfile} 
+                  isSaving={isSaving}
                 />
               </CardContent>
             </Card>
@@ -260,10 +369,10 @@ export default function ProfilePage() {
                 <SectionHeader title="Certifications" />
               </CardHeader>
               <CardContent>
-                <CertificationsForm
-                  initialValue={profile.certifications || []}
-                  onSaved={noop}
-                  updateProfile={updateProfile}
+                <CertificationsForm 
+                  initialValue={profile.certifications || []} 
+                  updateProfile={updateProfile} 
+                  isSaving={isSaving}
                 />
               </CardContent>
             </Card>
@@ -273,10 +382,10 @@ export default function ProfilePage() {
                 <SectionHeader title="Resume" />
               </CardHeader>
               <CardContent>
-                <ResumeForm
-                  initialValue={profile.resumeUrl}
-                  onSaved={noop}
-                  updateProfile={updateProfile}
+                <ResumeForm 
+                  initialValue={profile.resumeUrl} 
+                  updateProfile={updateProfile} 
+                  isSaving={isSaving}
                 />
               </CardContent>
             </Card>
@@ -284,28 +393,30 @@ export default function ProfilePage() {
         </main>
       </main>
     </>
-  );
+  )
 }
 
-function SummaryForm({
-  initialValue,
-  onSaved,
-  updateProfile,
-}: {
-  initialValue?: string;
-  onSaved: any;
-  updateProfile: any;
+function SummaryForm({ 
+  initialValue, 
+  updateProfile, 
+  isSaving 
+}: { 
+  initialValue?: string
+  updateProfile: any
+  isSaving: boolean
 }) {
-  const [summary, setSummary] = useState(initialValue || "");
+  const [summary, setSummary] = useState(initialValue || "")
+  const [localSaving, setLocalSaving] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLocalSaving(true)
+    await updateProfile({ summary })
+    setLocalSaving(false)
+  }
+
   return (
-    <form
-      className="space-y-3"
-      onSubmit={(e) => {
-        e.preventDefault();
-        updateProfile({ summary });
-        onSaved?.();
-      }}
-    >
+    <form className="space-y-3" onSubmit={handleSubmit}>
       <Label htmlFor="summary">Add a brief professional summary</Label>
       <Textarea
         id="summary"
@@ -314,21 +425,21 @@ function SummaryForm({
         rows={4}
         placeholder="Frontend developer with 4+ years in React and TypeScript..."
       />
-      <Button type="submit" className="w-fit">
-        Save
+      <Button type="submit" className="w-fit" disabled={localSaving || isSaving}>
+        {localSaving ? "Saving..." : "Save"}
       </Button>
     </form>
-  );
+  )
 }
 
 function PersonalForm({
   initialValue,
-  onSaved,
   updateProfile,
+  isSaving
 }: {
-  initialValue?: CandidateProfile["personal"];
-  onSaved: any;
-  updateProfile: any;
+  initialValue?: CandidateProfile["personal"]
+  updateProfile: any
+  isSaving: boolean
 }) {
   const [state, setState] = useState({
     fullName: initialValue?.fullName || "",
@@ -337,17 +448,18 @@ function PersonalForm({
     location: initialValue?.location || "",
     totalExperience: initialValue?.totalExperience || "",
     noticePeriod: initialValue?.noticePeriod || "",
-  });
+  })
+  const [localSaving, setLocalSaving] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLocalSaving(true)
+    await updateProfile({ personal: state })
+    setLocalSaving(false)
+  }
 
   return (
-    <form
-      className="grid grid-cols-1 md:grid-cols-2 gap-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        updateProfile({ personal: state });
-        onSaved?.();
-      }}
-    >
+    <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
       <div className="grid gap-2">
         <Label htmlFor="fullName">Full Name</Label>
         <Input
@@ -367,11 +479,7 @@ function PersonalForm({
       </div>
       <div className="grid gap-2">
         <Label htmlFor="mobile">Mobile</Label>
-        <Input
-          id="mobile"
-          value={state.mobile}
-          onChange={(e) => setState({ ...state, mobile: e.target.value })}
-        />
+        <Input id="mobile" value={state.mobile} onChange={(e) => setState({ ...state, mobile: e.target.value })} />
       </div>
       <div className="grid gap-2">
         <Label htmlFor="location">Location</Label>
@@ -386,9 +494,7 @@ function PersonalForm({
         <Input
           id="totalExperience"
           value={state.totalExperience}
-          onChange={(e) =>
-            setState({ ...state, totalExperience: e.target.value })
-          }
+          onChange={(e) => setState({ ...state, totalExperience: e.target.value })}
         />
       </div>
       <div className="grid gap-2">
@@ -400,35 +506,39 @@ function PersonalForm({
         />
       </div>
       <div className="md:col-span-2">
-        <Button type="submit">Save</Button>
+        <Button type="submit" disabled={localSaving || isSaving}>
+          {localSaving ? "Saving..." : "Save"}
+        </Button>
       </div>
     </form>
-  );
+  )
 }
 
-function SkillsForm({
-  initialValue,
-  onSaved,
-  updateProfile,
-}: {
-  initialValue: string[];
-  onSaved: any;
-  updateProfile: any;
+function SkillsForm({ 
+  initialValue, 
+  updateProfile, 
+  isSaving 
+}: { 
+  initialValue: string[]
+  updateProfile: any
+  isSaving: boolean
 }) {
-  const [skillsStr, setSkillsStr] = useState(initialValue.join(", "));
+  const [skillsStr, setSkillsStr] = useState(initialValue.join(", "))
+  const [localSaving, setLocalSaving] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLocalSaving(true)
+    const skills = skillsStr
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+    await updateProfile({ skills })
+    setLocalSaving(false)
+  }
+
   return (
-    <form
-      className="space-y-3"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const skills = skillsStr
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
-        updateProfile({ skills });
-        onSaved?.();
-      }}
-    >
+    <form className="space-y-3" onSubmit={handleSubmit}>
       <Label htmlFor="skills">Add skills (comma separated)</Label>
       <Input
         id="skills"
@@ -436,23 +546,23 @@ function SkillsForm({
         onChange={(e) => setSkillsStr(e.target.value)}
         placeholder="React, Next.js, TypeScript"
       />
-      <Button type="submit" className="w-fit">
-        Save
+      <Button type="submit" className="w-fit" disabled={localSaving || isSaving}>
+        {localSaving ? "Saving..." : "Save"}
       </Button>
     </form>
-  );
+  )
 }
 
 function EmploymentForm({
   initialValue,
-  onSaved,
   updateProfile,
+  isSaving
 }: {
-  initialValue: NonNullable<CandidateProfile["employment"]>;
-  onSaved: any;
-  updateProfile: any;
+  initialValue: NonNullable<CandidateProfile["employment"]>
+  updateProfile: any
+  isSaving: boolean
 }) {
-  const [items, setItems] = useState(initialValue || []);
+  const [items, setItems] = useState(initialValue || [])
   const [draft, setDraft] = useState({
     company: "",
     designation: "",
@@ -460,27 +570,45 @@ function EmploymentForm({
     to: "",
     current: false,
     description: "",
-  });
+  })
+  const [editIndex, setEditIndex] = useState<number | null>(null)
+  const [localSaving, setLocalSaving] = useState(false)
 
-  // keep local items in sync when parent initialValue changes
   useEffect(() => {
-    setItems(initialValue || []);
-  }, [initialValue]);
+    setItems(initialValue || [])
+  }, [initialValue])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!draft.company.trim() && !draft.designation.trim()) return
+    
+    setLocalSaving(true)
+    let next
+    
+    if (editIndex !== null) {
+      next = items.map((item, idx) => (idx === editIndex ? { ...draft } : item))
+      setEditIndex(null)
+    } else {
+      next = [...items, { ...draft }]
+    }
+    
+    setItems(next)
+    await updateProfile({ employment: next })
+    setDraft({ company: "", designation: "", from: "", to: "", current: false, description: "" })
+    setLocalSaving(false)
+  }
+
+  const handleRemove = async (index: number) => {
+    setLocalSaving(true)
+    const next = items.filter((_, i) => i !== index)
+    setItems(next)
+    await updateProfile({ employment: next })
+    setLocalSaving(false)
+  }
+
   return (
     <div className="space-y-4">
-      <form
-        className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          // basic validation: require company or designation
-          if (!draft.company.trim() && !draft.designation.trim()) return;
-          const next = [...items, { ...draft }];
-          setItems(next);
-          updateProfile({ employment: next });
-          onSaved?.();
-          setDraft({ company: "", designation: "", from: "", to: "", current: false, description: "" });
-        }}
-      >
+      <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
         <div className="grid gap-2">
           <Label htmlFor="company">Company</Label>
           <Input
@@ -540,8 +668,18 @@ function EmploymentForm({
             rows={3}
           />
         </div>
-        <div className="md:col-span-2">
-          <Button type="submit">Add Employment</Button>
+        <div className="md:col-span-2 flex gap-2">
+          <Button type="submit" disabled={localSaving || isSaving}>
+            {editIndex !== null ? "Update Employment" : "Add Employment"}
+          </Button>
+          {editIndex !== null && (
+            <Button type="button" variant="outline" onClick={() => {
+              setEditIndex(null)
+              setDraft({ company: "", designation: "", from: "", to: "", current: false, description: "" })
+            }}>
+              Cancel
+            </Button>
+          )}
         </div>
       </form>
 
@@ -575,12 +713,8 @@ function EmploymentForm({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    const next = items.filter((_, i) => i !== idx);
-                    setItems(next);
-                    updateProfile({ employment: next });
-                    onSaved?.();
-                  }}
+                  onClick={() => handleRemove(idx)}
+                  disabled={localSaving || isSaving}
                 >
                   Remove
                 </Button>
@@ -588,7 +722,6 @@ function EmploymentForm({
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    // populate draft with this item for quick editing
                     setDraft({
                       company: item.company || "",
                       designation: item.designation || "",
@@ -596,7 +729,8 @@ function EmploymentForm({
                       to: item.to || "",
                       current: !!item.current,
                       description: item.description || "",
-                    });
+                    })
+                    setEditIndex(idx)
                   }}
                 >
                   Edit
@@ -607,20 +741,19 @@ function EmploymentForm({
         )}
       </div>
     </div>
-  );
+  )
 }
-
 
 function EducationForm({
   initialValue,
-  onSaved,
   updateProfile,
+  isSaving
 }: {
-  initialValue: NonNullable<CandidateProfile["education"]>;
-  onSaved: any;
-  updateProfile: any;
+  initialValue: NonNullable<CandidateProfile["education"]>
+  updateProfile: any
+  isSaving: boolean
 }) {
-  const [items, setItems] = useState(initialValue || []);
+  const [items, setItems] = useState(initialValue || [])
   const [draft, setDraft] = useState({
     degree: "",
     institute: "",
@@ -628,35 +761,45 @@ function EducationForm({
     to: "",
     current: false,
     description: "",
-  });
+  })
+  const [editIndex, setEditIndex] = useState<number | null>(null)
+  const [localSaving, setLocalSaving] = useState(false)
 
-  // Sync local items when parent initialValue changes
   useEffect(() => {
-    setItems(initialValue || []);
-  }, [initialValue]);
+    setItems(initialValue || [])
+  }, [initialValue])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!draft.degree.trim() && !draft.institute.trim()) return
+    
+    setLocalSaving(true)
+    let next
+    
+    if (editIndex !== null) {
+      next = items.map((item, idx) => (idx === editIndex ? { ...draft } : item))
+      setEditIndex(null)
+    } else {
+      next = [...items, { ...draft }]
+    }
+    
+    setItems(next)
+    await updateProfile({ education: next })
+    setDraft({ degree: "", institute: "", from: "", to: "", current: false, description: "" })
+    setLocalSaving(false)
+  }
+
+  const handleRemove = async (index: number) => {
+    setLocalSaving(true)
+    const next = items.filter((_, i) => i !== index)
+    setItems(next)
+    await updateProfile({ education: next })
+    setLocalSaving(false)
+  }
 
   return (
     <div className="space-y-4">
-      <form
-        className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          // Basic validation
-          if (!draft.degree.trim() && !draft.institute.trim()) return;
-          const next = [...items, { ...draft }];
-          setItems(next);
-          updateProfile({ education: next });
-          onSaved?.();
-          setDraft({
-            degree: "",
-            institute: "",
-            from: "",
-            to: "",
-            current: false,
-            description: "",
-          });
-        }}
-      >
+      <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
         <div className="grid gap-2">
           <Label htmlFor="degree">Degree</Label>
           <Input
@@ -720,8 +863,18 @@ function EducationForm({
             rows={3}
           />
         </div>
-        <div className="md:col-span-2">
-          <Button type="submit">Add Education</Button>
+        <div className="md:col-span-2 flex gap-2">
+          <Button type="submit" disabled={localSaving || isSaving}>
+            {editIndex !== null ? "Update Education" : "Add Education"}
+          </Button>
+          {editIndex !== null && (
+            <Button type="button" variant="outline" onClick={() => {
+              setEditIndex(null)
+              setDraft({ degree: "", institute: "", from: "", to: "", current: false, description: "" })
+            }}>
+              Cancel
+            </Button>
+          )}
         </div>
       </form>
 
@@ -756,12 +909,8 @@ function EducationForm({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    const next = items.filter((_, i) => i !== idx);
-                    setItems(next);
-                    updateProfile({ education: next });
-                    onSaved?.();
-                  }}
+                  onClick={() => handleRemove(idx)}
+                  disabled={localSaving || isSaving}
                 >
                   Remove
                 </Button>
@@ -769,7 +918,6 @@ function EducationForm({
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    // populate draft with this item for quick editing
                     setDraft({
                       degree: item.degree || "",
                       institute: item.institute || "",
@@ -777,7 +925,8 @@ function EducationForm({
                       to: item.to || "",
                       current: !!item.current,
                       description: item.description || "",
-                    });
+                    })
+                    setEditIndex(idx)
                   }}
                 >
                   Edit
@@ -788,174 +937,60 @@ function EducationForm({
         )}
       </div>
     </div>
-  );
+  )
 }
 
-// function ProjectsForm({
-//   initialValue,
-//   onSaved,
-//   updateProfile,
-// }: {
-//   initialValue: NonNullable<CandidateProfile["projects"]>;
-//   onSaved: any;
-//   updateProfile: any;
-// }) {
-//   const [items, setItems] = useState(initialValue);
-//   const [draft, setDraft] = useState({
-//     name: "",
-//     role: "",
-//     from: "",
-//     to: "",
-//     description: "",
-//   });
-//   return (
-//     <div className="space-y-4">
-//       <form
-//         className="grid grid-cols-1 md:grid-cols-2 gap-4"
-//         onSubmit={(e) => {
-//           e.preventDefault();
-//           const next = [...items, { ...draft }];
-//           setItems(next);
-//           updateProfile({ projects: next });
-//           onSaved?.();
-//           setDraft({ name: "", role: "", from: "", to: "", description: "" });
-//         }}
-//       >
-//         <div className="grid gap-2">
-//           <Label>Project Name</Label>
-//           <Input
-//             value={draft.name}
-//             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-//           />
-//         </div>
-//         <div className="grid gap-2">
-//           <Label>Role</Label>
-//           <Input
-//             value={draft.role}
-//             onChange={(e) => setDraft({ ...draft, role: e.target.value })}
-//           />
-//         </div>
-//         <div className="grid gap-2">
-//           <Label>From</Label>
-//           <Input
-//             value={draft.from}
-//             onChange={(e) => setDraft({ ...draft, from: e.target.value })}
-//           />
-//         </div>
-//         <div className="grid gap-2">
-//           <Label>To</Label>
-//           <Input
-//             value={draft.to}
-//             onChange={(e) => setDraft({ ...draft, to: e.target.value })}
-//           />
-//         </div>
-//         <div className="md:col-span-2 grid gap-2">
-//           <Label>Description</Label>
-//           <Textarea
-//             value={draft.description}
-//             onChange={(e) =>
-//               setDraft({ ...draft, description: e.target.value })
-//             }
-//             rows={3}
-//           />
-//         </div>
-//         <div className="md:col-span-2">
-//           <Button type="submit">Add Project</Button>
-//         </div>
-//       </form>
-
-//       <div className="space-y-3">
-//         {items.length === 0 ? (
-//           <p className="text-sm text-muted-foreground">
-//             No projects added yet.
-//           </p>
-//         ) : (
-//           items.map((item, idx) => (
-//             <div key={idx} className="rounded-md border p-3">
-//               <div className="font-medium">{item.name}</div>
-//               <div className="text-sm text-muted-foreground">
-//                 {item.role} • {item.from} - {item.to || "Present"}
-//               </div>
-//               {item.description ? (
-//                 <p className="mt-2 text-sm">{item.description}</p>
-//               ) : null}
-//               <div className="mt-2">
-//                 <Button
-//                   variant="outline"
-//                   size="sm"
-//                   onClick={() => {
-//                     const next = items.filter((_, i) => i !== idx);
-//                     setItems(next);
-//                     updateProfile({ projects: next });
-//                     onSaved?.();
-//                   }}
-//                 >
-//                   Remove
-//                 </Button>
-//               </div>
-//             </div>
-//           ))
-//         )}
-//       </div>
-//     </div>
-//   );
-// }
 function ProjectsForm({
   initialValue,
-  onSaved,
   updateProfile,
+  isSaving
 }: {
-  initialValue: NonNullable<CandidateProfile["projects"]>;
-  onSaved: () => void;
-  updateProfile: (data: { projects: CandidateProfile["projects"] }) => void;
+  initialValue: NonNullable<CandidateProfile["projects"]>
+  updateProfile: any
+  isSaving: boolean
 }) {
-  const [items, setItems] = useState(initialValue || []);
-  const [draft, setDraft] = useState<{
-    name: string;
-    role: string;
-    from: string;
-    to?: string;
-    description?: string;
-  }>({
+  const [items, setItems] = useState(initialValue || [])
+  const [draft, setDraft] = useState({
     name: "",
     role: "",
     from: "",
     to: "",
     description: "",
-  });
-  const [editIndex, setEditIndex] = useState<number | null>(null);
+  })
+  const [editIndex, setEditIndex] = useState<number | null>(null)
+  const [localSaving, setLocalSaving] = useState(false)
 
-  // Keep local items in sync with parent updates
   useEffect(() => {
-    setItems(initialValue || []);
-  }, [initialValue]);
+    setItems(initialValue || [])
+  }, [initialValue])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!draft.name.trim() || !draft.role.trim() || !draft.from.trim()) {
-      alert("Please fill in Project Name, Role, and From fields.");
-      return;
-    }
-
-    let next;
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!draft.name.trim() || !draft.role.trim() || !draft.from.trim()) return
+    
+    setLocalSaving(true)
+    let next
+    
     if (editIndex !== null) {
-      // Update existing project
-      next = items.map((item, idx) => (idx === editIndex ? { ...draft } : item));
-      setEditIndex(null);
+      next = items.map((item, idx) => (idx === editIndex ? { ...draft } : item))
+      setEditIndex(null)
     } else {
-      // Add new project
-      next = [...items, { ...draft }];
+      next = [...items, { ...draft }]
     }
+    
+    setItems(next)
+    await updateProfile({ projects: next })
+    setDraft({ name: "", role: "", from: "", to: "", description: "" })
+    setLocalSaving(false)
+  }
 
-    setItems(next);
-    updateProfile({ projects: next });
-    onSaved?.();
-
-    // Reset draft
-    setDraft({ name: "", role: "", from: "", to: "", description: "" });
-  };
+  const handleRemove = async (index: number) => {
+    setLocalSaving(true)
+    const next = items.filter((_, i) => i !== index)
+    setItems(next)
+    await updateProfile({ projects: next })
+    setLocalSaving(false)
+  }
 
   return (
     <div className="space-y-4">
@@ -990,7 +1025,7 @@ function ProjectsForm({
         <div className="grid gap-2">
           <Label>To</Label>
           <Input
-            value={draft.to || ""}
+            value={draft.to}
             onChange={(e) => setDraft({ ...draft, to: e.target.value })}
             placeholder="Dec 2023 or Present"
           />
@@ -998,16 +1033,24 @@ function ProjectsForm({
         <div className="md:col-span-2 grid gap-2">
           <Label>Description</Label>
           <Textarea
-            value={draft.description || ""}
+            value={draft.description}
             onChange={(e) => setDraft({ ...draft, description: e.target.value })}
             rows={3}
             placeholder="Brief description of the project"
           />
         </div>
-        <div className="md:col-span-2">
-          <Button type="submit">
+        <div className="md:col-span-2 flex gap-2">
+          <Button type="submit" disabled={localSaving || isSaving}>
             {editIndex !== null ? "Update Project" : "Add Project"}
           </Button>
+          {editIndex !== null && (
+            <Button type="button" variant="outline" onClick={() => {
+              setEditIndex(null)
+              setDraft({ name: "", role: "", from: "", to: "", description: "" })
+            }}>
+              Cancel
+            </Button>
+          )}
         </div>
       </form>
 
@@ -1032,16 +1075,11 @@ function ProjectsForm({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    const next = items.filter((_, i) => i !== idx);
-                    setItems(next);
-                    updateProfile({ projects: next });
-                    onSaved?.();
-                  }}
+                  onClick={() => handleRemove(idx)}
+                  disabled={localSaving || isSaving}
                 >
                   Remove
                 </Button>
-
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1052,8 +1090,8 @@ function ProjectsForm({
                       from: item.from || "",
                       to: item.to || "",
                       description: item.description || "",
-                    });
-                    setEditIndex(idx);
+                    })
+                    setEditIndex(idx)
                   }}
                 >
                   Edit
@@ -1064,66 +1102,55 @@ function ProjectsForm({
         )}
       </div>
     </div>
-  );
+  )
 }
-
 
 function CertificationsForm({
   initialValue,
-  onSaved,
   updateProfile,
+  isSaving
 }: {
-  initialValue: NonNullable<CandidateProfile["certifications"]>;
-  onSaved: any;
-  updateProfile: any;
+  initialValue: NonNullable<CandidateProfile["certifications"]>
+  updateProfile: any
+  isSaving: boolean
 }) {
-  const [items, setItems] = useState(initialValue);
-  const [draft, setDraft] = useState({ name: "", authority: "", year: "" });
-  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [items, setItems] = useState(initialValue || [])
+  const [draft, setDraft] = useState({ name: "", authority: "", year: "" })
+  const [editIndex, setEditIndex] = useState<number | null>(null)
+  const [localSaving, setLocalSaving] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    setItems(initialValue || [])
+  }, [initialValue])
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLocalSaving(true)
+    
+    let next
     if (editIndex !== null) {
-      // Editing existing certification
-      const next = [...items];
-      next[editIndex] = { ...draft };
-      setItems(next);
-      updateProfile({ certifications: next });
-      onSaved?.();
-      setEditIndex(null);
+      next = items.map((item, idx) => (idx === editIndex ? { ...draft } : item))
+      setEditIndex(null)
     } else {
-      // Adding new certification
-      const next = [...items, { ...draft }];
-      setItems(next);
-      updateProfile({ certifications: next });
-      onSaved?.();
+      next = [...items, { ...draft }]
     }
+    
+    setItems(next)
+    await updateProfile({ certifications: next })
+    setDraft({ name: "", authority: "", year: "" })
+    setLocalSaving(false)
+  }
 
-    // Clear the form
-    setDraft({ name: "", authority: "", year: "" });
-  };
-
-  const handleEdit = (index: number) => {
-    setEditIndex(index);
-    setDraft(items[index]);
-  };
-
-  const handleRemove = (index: number) => {
-    const next = items.filter((_, i) => i !== index);
-    setItems(next);
-    updateProfile({ certifications: next });
-    onSaved?.();
-  };
-
-  const handleCancelEdit = () => {
-    setEditIndex(null);
-    setDraft({ name: "", authority: "", year: "" });
-  };
+  const handleRemove = async (index: number) => {
+    setLocalSaving(true)
+    const next = items.filter((_, i) => i !== index)
+    setItems(next)
+    await updateProfile({ certifications: next })
+    setLocalSaving(false)
+  }
 
   return (
     <div className="space-y-4">
-      {/* Add/Edit Form */}
       <form className="grid grid-cols-1 md:grid-cols-3 gap-4" onSubmit={handleSubmit}>
         <div className="grid gap-2">
           <Label>Name</Label>
@@ -1139,7 +1166,7 @@ function CertificationsForm({
           <Input
             value={draft.authority}
             onChange={(e) => setDraft({ ...draft, authority: e.target.value })}
-            placeholder="Authority"
+            placeholder="Amazon Web Services"
             required
           />
         </div>
@@ -1148,33 +1175,31 @@ function CertificationsForm({
           <Input
             value={draft.year}
             onChange={(e) => setDraft({ ...draft, year: e.target.value })}
-            placeholder="Year"
+            placeholder="2023"
             required
           />
         </div>
-
-        <div className="md:col-span-3 flex gap-3">
-          <Button type="submit">
+        <div className="md:col-span-3 flex gap-2">
+          <Button type="submit" disabled={localSaving || isSaving}>
             {editIndex !== null ? "Update Certification" : "Add Certification"}
           </Button>
           {editIndex !== null && (
-            <Button type="button" variant="outline" onClick={handleCancelEdit}>
+            <Button type="button" variant="outline" onClick={() => {
+              setEditIndex(null)
+              setDraft({ name: "", authority: "", year: "" })
+            }}>
               Cancel
             </Button>
           )}
         </div>
       </form>
 
-      {/* List of Certifications */}
       <div className="space-y-3">
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">No certifications added yet.</p>
         ) : (
           items.map((item, idx) => (
-            <div
-              key={idx}
-              className="rounded-md border p-3 flex items-center justify-between"
-            >
+            <div key={idx} className="rounded-md border p-3 flex items-center justify-between">
               <div>
                 <div className="font-medium">{item.name}</div>
                 <div className="text-sm text-muted-foreground">
@@ -1185,7 +1210,10 @@ function CertificationsForm({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleEdit(idx)}
+                  onClick={() => {
+                    setDraft(item)
+                    setEditIndex(idx)
+                  }}
                 >
                   Edit
                 </Button>
@@ -1193,6 +1221,7 @@ function CertificationsForm({
                   variant="outline"
                   size="sm"
                   onClick={() => handleRemove(idx)}
+                  disabled={localSaving || isSaving}
                 >
                   Remove
                 </Button>
@@ -1202,67 +1231,66 @@ function CertificationsForm({
         )}
       </div>
     </div>
-  );
+  )
 }
 
-function ResumeForm({
-  initialValue,
-  onSaved,
-  updateProfile,
-}: {
-  initialValue?: string;
-  onSaved: any;
-  updateProfile: any;
+function ResumeForm({ 
+  initialValue, 
+  updateProfile, 
+  isSaving 
+}: { 
+  initialValue?: string
+  updateProfile: any
+  isSaving: boolean
 }) {
-  const [resumeUrl, setResumeUrl] = useState(initialValue || "");
-  const [file, setFile] = useState<File | null>(null);
-  const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [resumeUrl, setResumeUrl] = useState(initialValue || "")
+  const [file, setFile] = useState<File | null>(null)
+  const [dragActive, setDragActive] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [localSaving, setLocalSaving] = useState(false)
 
   const handleFile = async (file: File) => {
-    setFile(file);
-    setUploading(true);
+    setFile(file)
+    setUploading(true)
 
-    // ⚠️ Replace this with your actual upload logic (e.g., Firebase, S3, or API call)
-    // For now, just simulate upload
+    // Simulate file upload
     setTimeout(() => {
-      const fakeUrl = URL.createObjectURL(file);
-      setResumeUrl(fakeUrl);
-      setUploading(false);
-    }, 1500);
-  };
+      const fakeUrl = URL.createObjectURL(file)
+      setResumeUrl(fakeUrl)
+      setUploading(false)
+    }, 1500)
+  }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
+      handleFile(e.dataTransfer.files[0])
     }
-  };
+  }
 
   const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault()
+    e.stopPropagation()
     if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
+      setDragActive(true)
     } else if (e.type === "dragleave") {
-      setDragActive(false);
+      setDragActive(false)
     }
-  };
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLocalSaving(true)
+    await updateProfile({ resumeUrl })
+    setLocalSaving(false)
+  }
 
   return (
-    <form
-      className="space-y-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        updateProfile({ resumeUrl });
-        onSaved?.();
-      }}
-    >
+    <form className="space-y-4" onSubmit={handleSubmit}>
       <Label className="text-base font-medium">Upload Resume</Label>
 
-      {/* Drag and Drop Area */}
       <div
         onDragEnter={handleDrag}
         onDragOver={handleDrag}
@@ -1282,7 +1310,7 @@ function ResumeForm({
           className="hidden"
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
-              handleFile(e.target.files[0]);
+              handleFile(e.target.files[0])
             }
           }}
         />
@@ -1323,8 +1351,8 @@ function ResumeForm({
             variant="ghost"
             size="sm"
             onClick={() => {
-              setFile(null);
-              setResumeUrl("");
+              setFile(null)
+              setResumeUrl("")
             }}
           >
             Remove
@@ -1332,11 +1360,9 @@ function ResumeForm({
         </div>
       )}
 
-      <Button type="submit" disabled={uploading || !resumeUrl}>
-        {uploading ? "Saving..." : "Save"}
+      <Button type="submit" disabled={uploading || localSaving || isSaving || !resumeUrl}>
+        {(uploading || localSaving) ? "Saving..." : "Save"}
       </Button>
     </form>
-  );
+  )
 }
-
-
