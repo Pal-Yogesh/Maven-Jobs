@@ -27,7 +27,7 @@ export function Navbar() {
             <Link className="text-muted-foreground hover:text-foreground" href="/candidate">
               Jobs
             </Link>
-            <Link className="text-muted-foreground hover:text-foreground" href="/recruiter">
+            <Link className="text-muted-foreground hover:text-foreground" href="/recruiter/login">
               Recruiter
             </Link>
             <Link className="text-muted-foreground hover:text-foreground" href="https://resume-parser-steel.vercel.app/resume-parser">

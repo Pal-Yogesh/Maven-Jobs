@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { RegisterForm } from "@/components/auth/register-form"
+import { RecruiterRegisterForm } from "@/components/auth/recruiter-register-form"
 
 export default function RegisterPage() {
   return (
@@ -25,7 +25,7 @@ export default function RegisterPage() {
       <section className="flex-1">
         <div className="mx-auto max-w-6xl px-4 py-10 grid gap-8 md:grid-cols-2">
           <div className="order-2 md:order-1">
-            <RegisterForm />
+            <RecruiterRegisterForm />
           </div>
           <aside className="order-1 md:order-2">
             <div className="rounded-lg border p-6 h-full">

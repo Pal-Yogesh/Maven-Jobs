@@ -15,48 +15,49 @@ datasource db {
 }
 
 model user {
-  id               String            @id @default(uuid())
+  id               String    @id @default(uuid())
   name             String
-  email            String            @unique
+  email            String    @unique
   password         String?
-  isVerified       Boolean           @default(false)
+  isVerified       Boolean   @default(false)
   verifyCode       String?
   verifyCodeExpiry DateTime?
-  role             String            @default("candidate")
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  
+  role             String    @default("candidate")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
   // Relations
-  profile          Profile?
-  employments      Employment[]
-  educations       Education[]
-  projects         Project[]
-  certifications   Certification[]
-  skills           Skill[]
+  profile        Profile?
+  employments    Employment[]
+  educations     Education[]
+  projects       Project[]
+  certifications Certification[]
+  skills         Skill[]
+  Job            Job[]
 }
 
 // Profile - stores basic profile information (one-to-one with User)
 model Profile {
-  id               String   @id @default(uuid())
-  userId           String   @unique
-  user             user     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(uuid())
+  userId String @unique
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Profile Summary
-  summary          String?  @db.Text
-  
+  summary String? @db.Text
+
   // Personal Details
-  fullName         String?
-  mobile           String?
-  location         String?
-  totalExperience  String?
-  noticePeriod     String?
-  
+  fullName        String?
+  mobile          String?
+  location        String?
+  totalExperience String?
+  noticePeriod    String?
+
   // Resume
-  resumeUrl        String?
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
+  resumeUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("profiles")
 }
 
@@ -67,80 +68,103 @@ model Skill {
   user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   createdAt DateTime @default(now())
-  
+
   @@index([userId])
   @@map("skills")
 }
 
 // Employment History - one-to-many relationship
 model Employment {
-  id          String   @id @default(uuid())
-  userId      String
-  user        user     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(uuid())
+  userId String
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   company     String
   designation String
-  from        String   // Can be stored as date string or DateTime
+  from        String // Can be stored as date string or DateTime
   to          String?
-  current     Boolean  @default(false)
-  description String?  @db.Text
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  current     Boolean @default(false)
+  description String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([userId])
   @@map("employments")
 }
 
 // Education - one-to-many relationship
 model Education {
-  id        String   @id @default(uuid())
-  userId    String
-  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(uuid())
+  userId String
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   degree    String
   institute String
   year      String
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([userId])
   @@map("educations")
 }
 
 // Projects - one-to-many relationship
 model Project {
-  id          String   @id @default(uuid())
-  userId      String
-  user        user     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(uuid())
+  userId String
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   name        String
   role        String
   from        String
   to          String?
-  description String?  @db.Text
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  description String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([userId])
   @@map("projects")
 }
 
 // Certifications - one-to-many relationship
 model Certification {
-  id        String   @id @default(uuid())
-  userId    String
-  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(uuid())
+  userId String
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   name      String
   authority String
   year      String
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([userId])
   @@map("certifications")
+}
+
+// Job model for job posting functionality
+model Job {
+  id             String   @id @default(uuid())
+  title          String
+  description    String?  @db.Text
+  company        String
+  location       String
+  salary         String?
+  type           String   // Combined field for backward compatibility
+  employmentType String?  // Full-time, Part-time, Contract, Internship
+  workMode       String?  // On-site, Remote, Hybrid
+  experience     String
+  skills         String
+  postedBy       String
+  user           user     @relation(fields: [postedBy], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([postedBy])
+  @@map("jobs")
 }
