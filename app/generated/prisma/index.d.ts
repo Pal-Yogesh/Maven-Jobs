@@ -309,8 +309,8 @@ export namespace Prisma {
   export import Exact = $Public.Exact
 
   /**
-   * Prisma Client JS version: 6.16.3
-   * Query Engine version: bb420e667c1820a8c05a38023385f6cc7ef8e83a
+   * Prisma Client JS version: 6.17.0
+   * Query Engine version: c0aafc03b8ef6cdced8654b9a817999e02457d6a
    */
   export type PrismaVersion = {
     client: string
@@ -6189,7 +6189,10 @@ export namespace Prisma {
     userId: string | null
     degree: string | null
     institute: string | null
-    year: string | null
+    from: string | null
+    to: string | null
+    current: boolean | null
+    description: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -6199,7 +6202,10 @@ export namespace Prisma {
     userId: string | null
     degree: string | null
     institute: string | null
-    year: string | null
+    from: string | null
+    to: string | null
+    current: boolean | null
+    description: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -6209,7 +6215,10 @@ export namespace Prisma {
     userId: number
     degree: number
     institute: number
-    year: number
+    from: number
+    to: number
+    current: number
+    description: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -6221,7 +6230,10 @@ export namespace Prisma {
     userId?: true
     degree?: true
     institute?: true
-    year?: true
+    from?: true
+    to?: true
+    current?: true
+    description?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -6231,7 +6243,10 @@ export namespace Prisma {
     userId?: true
     degree?: true
     institute?: true
-    year?: true
+    from?: true
+    to?: true
+    current?: true
+    description?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -6241,7 +6256,10 @@ export namespace Prisma {
     userId?: true
     degree?: true
     institute?: true
-    year?: true
+    from?: true
+    to?: true
+    current?: true
+    description?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -6324,7 +6342,10 @@ export namespace Prisma {
     userId: string
     degree: string
     institute: string
-    year: string
+    from: string | null
+    to: string | null
+    current: boolean
+    description: string | null
     createdAt: Date
     updatedAt: Date
     _count: EducationCountAggregateOutputType | null
@@ -6351,7 +6372,10 @@ export namespace Prisma {
     userId?: boolean
     degree?: boolean
     institute?: boolean
-    year?: boolean
+    from?: boolean
+    to?: boolean
+    current?: boolean
+    description?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | userDefaultArgs<ExtArgs>
@@ -6362,7 +6386,10 @@ export namespace Prisma {
     userId?: boolean
     degree?: boolean
     institute?: boolean
-    year?: boolean
+    from?: boolean
+    to?: boolean
+    current?: boolean
+    description?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | userDefaultArgs<ExtArgs>
@@ -6373,7 +6400,10 @@ export namespace Prisma {
     userId?: boolean
     degree?: boolean
     institute?: boolean
-    year?: boolean
+    from?: boolean
+    to?: boolean
+    current?: boolean
+    description?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | userDefaultArgs<ExtArgs>
@@ -6384,12 +6414,15 @@ export namespace Prisma {
     userId?: boolean
     degree?: boolean
     institute?: boolean
-    year?: boolean
+    from?: boolean
+    to?: boolean
+    current?: boolean
+    description?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type EducationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "degree" | "institute" | "year" | "createdAt" | "updatedAt", ExtArgs["result"]["education"]>
+  export type EducationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "degree" | "institute" | "from" | "to" | "current" | "description" | "createdAt" | "updatedAt", ExtArgs["result"]["education"]>
   export type EducationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | userDefaultArgs<ExtArgs>
   }
@@ -6410,7 +6443,10 @@ export namespace Prisma {
       userId: string
       degree: string
       institute: string
-      year: string
+      from: string | null
+      to: string | null
+      current: boolean
+      description: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["education"]>
@@ -6841,7 +6877,10 @@ export namespace Prisma {
     readonly userId: FieldRef<"Education", 'String'>
     readonly degree: FieldRef<"Education", 'String'>
     readonly institute: FieldRef<"Education", 'String'>
-    readonly year: FieldRef<"Education", 'String'>
+    readonly from: FieldRef<"Education", 'String'>
+    readonly to: FieldRef<"Education", 'String'>
+    readonly current: FieldRef<"Education", 'Boolean'>
+    readonly description: FieldRef<"Education", 'String'>
     readonly createdAt: FieldRef<"Education", 'DateTime'>
     readonly updatedAt: FieldRef<"Education", 'DateTime'>
   }
@@ -10705,7 +10744,10 @@ export namespace Prisma {
     userId: 'userId',
     degree: 'degree',
     institute: 'institute',
-    year: 'year',
+    from: 'from',
+    to: 'to',
+    current: 'current',
+    description: 'description',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -11163,7 +11205,10 @@ export namespace Prisma {
     userId?: StringFilter<"Education"> | string
     degree?: StringFilter<"Education"> | string
     institute?: StringFilter<"Education"> | string
-    year?: StringFilter<"Education"> | string
+    from?: StringNullableFilter<"Education"> | string | null
+    to?: StringNullableFilter<"Education"> | string | null
+    current?: BoolFilter<"Education"> | boolean
+    description?: StringNullableFilter<"Education"> | string | null
     createdAt?: DateTimeFilter<"Education"> | Date | string
     updatedAt?: DateTimeFilter<"Education"> | Date | string
     user?: XOR<UserScalarRelationFilter, userWhereInput>
@@ -11174,7 +11219,10 @@ export namespace Prisma {
     userId?: SortOrder
     degree?: SortOrder
     institute?: SortOrder
-    year?: SortOrder
+    from?: SortOrderInput | SortOrder
+    to?: SortOrderInput | SortOrder
+    current?: SortOrder
+    description?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     user?: userOrderByWithRelationInput
@@ -11188,7 +11236,10 @@ export namespace Prisma {
     userId?: StringFilter<"Education"> | string
     degree?: StringFilter<"Education"> | string
     institute?: StringFilter<"Education"> | string
-    year?: StringFilter<"Education"> | string
+    from?: StringNullableFilter<"Education"> | string | null
+    to?: StringNullableFilter<"Education"> | string | null
+    current?: BoolFilter<"Education"> | boolean
+    description?: StringNullableFilter<"Education"> | string | null
     createdAt?: DateTimeFilter<"Education"> | Date | string
     updatedAt?: DateTimeFilter<"Education"> | Date | string
     user?: XOR<UserScalarRelationFilter, userWhereInput>
@@ -11199,7 +11250,10 @@ export namespace Prisma {
     userId?: SortOrder
     degree?: SortOrder
     institute?: SortOrder
-    year?: SortOrder
+    from?: SortOrderInput | SortOrder
+    to?: SortOrderInput | SortOrder
+    current?: SortOrder
+    description?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: EducationCountOrderByAggregateInput
@@ -11215,7 +11269,10 @@ export namespace Prisma {
     userId?: StringWithAggregatesFilter<"Education"> | string
     degree?: StringWithAggregatesFilter<"Education"> | string
     institute?: StringWithAggregatesFilter<"Education"> | string
-    year?: StringWithAggregatesFilter<"Education"> | string
+    from?: StringNullableWithAggregatesFilter<"Education"> | string | null
+    to?: StringNullableWithAggregatesFilter<"Education"> | string | null
+    current?: BoolWithAggregatesFilter<"Education"> | boolean
+    description?: StringNullableWithAggregatesFilter<"Education"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Education"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Education"> | Date | string
   }
@@ -11818,7 +11875,10 @@ export namespace Prisma {
     id?: string
     degree: string
     institute: string
-    year: string
+    from?: string | null
+    to?: string | null
+    current?: boolean
+    description?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     user: userCreateNestedOneWithoutEducationsInput
@@ -11829,7 +11889,10 @@ export namespace Prisma {
     userId: string
     degree: string
     institute: string
-    year: string
+    from?: string | null
+    to?: string | null
+    current?: boolean
+    description?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -11838,7 +11901,10 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     degree?: StringFieldUpdateOperationsInput | string
     institute?: StringFieldUpdateOperationsInput | string
-    year?: StringFieldUpdateOperationsInput | string
+    from?: NullableStringFieldUpdateOperationsInput | string | null
+    to?: NullableStringFieldUpdateOperationsInput | string | null
+    current?: BoolFieldUpdateOperationsInput | boolean
+    description?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: userUpdateOneRequiredWithoutEducationsNestedInput
@@ -11849,7 +11915,10 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     degree?: StringFieldUpdateOperationsInput | string
     institute?: StringFieldUpdateOperationsInput | string
-    year?: StringFieldUpdateOperationsInput | string
+    from?: NullableStringFieldUpdateOperationsInput | string | null
+    to?: NullableStringFieldUpdateOperationsInput | string | null
+    current?: BoolFieldUpdateOperationsInput | boolean
+    description?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -11859,7 +11928,10 @@ export namespace Prisma {
     userId: string
     degree: string
     institute: string
-    year: string
+    from?: string | null
+    to?: string | null
+    current?: boolean
+    description?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -11868,7 +11940,10 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     degree?: StringFieldUpdateOperationsInput | string
     institute?: StringFieldUpdateOperationsInput | string
-    year?: StringFieldUpdateOperationsInput | string
+    from?: NullableStringFieldUpdateOperationsInput | string | null
+    to?: NullableStringFieldUpdateOperationsInput | string | null
+    current?: BoolFieldUpdateOperationsInput | boolean
+    description?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -11878,7 +11953,10 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     degree?: StringFieldUpdateOperationsInput | string
     institute?: StringFieldUpdateOperationsInput | string
-    year?: StringFieldUpdateOperationsInput | string
+    from?: NullableStringFieldUpdateOperationsInput | string | null
+    to?: NullableStringFieldUpdateOperationsInput | string | null
+    current?: BoolFieldUpdateOperationsInput | boolean
+    description?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -12503,7 +12581,10 @@ export namespace Prisma {
     userId?: SortOrder
     degree?: SortOrder
     institute?: SortOrder
-    year?: SortOrder
+    from?: SortOrder
+    to?: SortOrder
+    current?: SortOrder
+    description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -12513,7 +12594,10 @@ export namespace Prisma {
     userId?: SortOrder
     degree?: SortOrder
     institute?: SortOrder
-    year?: SortOrder
+    from?: SortOrder
+    to?: SortOrder
+    current?: SortOrder
+    description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -12523,7 +12607,10 @@ export namespace Prisma {
     userId?: SortOrder
     degree?: SortOrder
     institute?: SortOrder
-    year?: SortOrder
+    from?: SortOrder
+    to?: SortOrder
+    current?: SortOrder
+    description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -13263,7 +13350,10 @@ export namespace Prisma {
     id?: string
     degree: string
     institute: string
-    year: string
+    from?: string | null
+    to?: string | null
+    current?: boolean
+    description?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -13272,7 +13362,10 @@ export namespace Prisma {
     id?: string
     degree: string
     institute: string
-    year: string
+    from?: string | null
+    to?: string | null
+    current?: boolean
+    description?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -13504,7 +13597,10 @@ export namespace Prisma {
     userId?: StringFilter<"Education"> | string
     degree?: StringFilter<"Education"> | string
     institute?: StringFilter<"Education"> | string
-    year?: StringFilter<"Education"> | string
+    from?: StringNullableFilter<"Education"> | string | null
+    to?: StringNullableFilter<"Education"> | string | null
+    current?: BoolFilter<"Education"> | boolean
+    description?: StringNullableFilter<"Education"> | string | null
     createdAt?: DateTimeFilter<"Education"> | Date | string
     updatedAt?: DateTimeFilter<"Education"> | Date | string
   }
@@ -14291,7 +14387,10 @@ export namespace Prisma {
     id?: string
     degree: string
     institute: string
-    year: string
+    from?: string | null
+    to?: string | null
+    current?: boolean
+    description?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -14378,7 +14477,10 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     degree?: StringFieldUpdateOperationsInput | string
     institute?: StringFieldUpdateOperationsInput | string
-    year?: StringFieldUpdateOperationsInput | string
+    from?: NullableStringFieldUpdateOperationsInput | string | null
+    to?: NullableStringFieldUpdateOperationsInput | string | null
+    current?: BoolFieldUpdateOperationsInput | boolean
+    description?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -14387,7 +14489,10 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     degree?: StringFieldUpdateOperationsInput | string
     institute?: StringFieldUpdateOperationsInput | string
-    year?: StringFieldUpdateOperationsInput | string
+    from?: NullableStringFieldUpdateOperationsInput | string | null
+    to?: NullableStringFieldUpdateOperationsInput | string | null
+    current?: BoolFieldUpdateOperationsInput | boolean
+    description?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -14396,7 +14501,10 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     degree?: StringFieldUpdateOperationsInput | string
     institute?: StringFieldUpdateOperationsInput | string
-    year?: StringFieldUpdateOperationsInput | string
+    from?: NullableStringFieldUpdateOperationsInput | string | null
+    to?: NullableStringFieldUpdateOperationsInput | string | null
+    current?: BoolFieldUpdateOperationsInput | boolean
+    description?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

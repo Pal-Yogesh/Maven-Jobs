@@ -28,6 +28,8 @@ export async function GET(request: Request) {
       }
     });
 
+    console.log("profile", profile)
+
     const skills = await prisma.skill.findMany({
       where: { userId }
     });
@@ -39,6 +41,8 @@ export async function GET(request: Request) {
     const educations = await prisma.education.findMany({
       where: { userId }
     });
+
+    console.log(educations)
 
     const projects = await prisma.project.findMany({
       where: { userId }
@@ -142,7 +146,10 @@ export async function POST(request: Request) {
               userId,
               degree: edu.degree,
               institute: edu.institute,
-              year: edu.year
+              from: edu.from,
+              to: edu.to,
+              current: edu.current,
+              description: edu.description
             }))
           });
         }
@@ -181,7 +188,7 @@ export async function POST(request: Request) {
       }
 
       return { profile };
-    });
+    },{ timeout: 10000 });
 
     return NextResponse.json({
       success: true,

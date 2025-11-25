@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { useSession } from "next-auth/react"
-import { useToast } from "@/hooks/use-toast"
 import axios from "axios"
 import { Navbar } from "@/components/navbar"
+import toast from "react-hot-toast"
+import { useToast } from "@/hooks/use-toast"
 
 // Type definitions
 export type CandidateProfile = {
@@ -1253,12 +1254,39 @@ function ResumeForm({
     setFile(file)
     setUploading(true)
 
-    // Simulate file upload
-    setTimeout(() => {
-      const fakeUrl = URL.createObjectURL(file)
-      setResumeUrl(fakeUrl)
+    try {
+      // Upload file to Cloudflare R2
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/upload-resume', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setResumeUrl(result.data.resumeUrl)
+        await updateProfile({ resumeUrl: result.data.resumeUrl })
+        toast({
+          title: "Success",
+          description: "Resume uploaded successfully",
+        })
+      } else {
+        throw new Error(result.message)
+      }
+    } catch (error: any) {
+      console.error('Error uploading resume:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload resume",
+        variant: "destructive",
+      })
+      setFile(null)
+    } finally {
       setUploading(false)
-    }, 1500)
+    }
   }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -1280,15 +1308,62 @@ function ResumeForm({
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleRemove = async () => {
     setLocalSaving(true)
-    await updateProfile({ resumeUrl })
-    setLocalSaving(false)
+    try {
+      await updateProfile({ resumeUrl: "" })
+      setFile(null)
+      setResumeUrl("")
+      toast({
+        title: "Success",
+        description: "Resume removed successfully",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove resume",
+        variant: "destructive",
+      })
+    } finally {
+      setLocalSaving(false)
+    }
+  }
+
+  const handleResumeDownload = async() => {
+    try {
+      // Get presigned URL from API
+      const resumePresignedUrl = await axios.get(`/api/presigned-url?fileKey=${resumeUrl}`)
+      const downloadLink = resumePresignedUrl.data.presignedUrl
+
+      const parts = resumeUrl.split('/')
+      const originalFilename = parts.length >= 2 ? parts[parts.length - 2] : 'Resume.pdf'
+
+      // Fetch the file as a blob
+      const response = await fetch(downloadLink)
+      const blob = await response.blob()
+
+      // Create a blob URL
+      const blobUrl = window.URL.createObjectURL(blob)
+
+      // Create download link
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = originalFilename
+      link.click()
+
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(blobUrl)
+
+      toast.success("Resume downloaded successfully")
+        
+    } catch (error) {
+      console.error('Error downloading resume:', error)
+      toast.error("Failed to download resume")
+    }
   }
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
+    <div className="space-y-4">
       <Label className="text-base font-medium">Upload Resume</Label>
 
       <div
@@ -1299,15 +1374,18 @@ function ResumeForm({
         className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 cursor-pointer transition-colors ${
           dragActive
             ? "border-primary bg-primary/5"
+            : uploading 
+            ? "border-muted-foreground/30 cursor-not-allowed opacity-60"
             : "border-muted-foreground/30 hover:border-primary/60"
         }`}
-        onClick={() => document.getElementById("fileInput")?.click()}
+        onClick={() => !uploading && document.getElementById("fileInput")?.click()}
       >
         <input
           type="file"
           id="fileInput"
           accept=".pdf,.doc,.docx"
           className="hidden"
+          disabled={uploading}
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
               handleFile(e.target.files[0])
@@ -1316,53 +1394,115 @@ function ResumeForm({
         />
 
         {uploading ? (
-          <p className="text-sm text-muted-foreground animate-pulse">
-            Uploading resume...
-          </p>
+          <div className="flex flex-col items-center gap-2">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="text-sm text-muted-foreground">
+              Uploading resume...
+            </p>
+          </div>
         ) : file ? (
           <p className="text-sm text-muted-foreground">
             ✅ {file.name} uploaded successfully
           </p>
         ) : (
           <>
+            <svg
+              className="w-12 h-12 mb-3 text-muted-foreground"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
             <p className="text-sm text-muted-foreground">
               Drag and drop your resume here, or{" "}
               <span className="text-primary font-medium">browse</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Supported formats: PDF, DOC, DOCX
+              Supported formats: PDF, DOC, DOCX (Max 5MB)
             </p>
           </>
         )}
       </div>
 
       {resumeUrl && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground border rounded-md px-3 py-2">
-          <a
-            href={resumeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline truncate max-w-[80%]"
-          >
-            View Uploaded Resume
-          </a>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setFile(null)
-              setResumeUrl("")
-            }}
-          >
-            Remove
-          </Button>
+        <div className="border rounded-md px-4 py-3 bg-background">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h4 className="font-medium text-sm mb-1">
+                {(() => {
+                  const parts = resumeUrl.split('/')
+                  // Format: resumes/uuid/originalFilename/timestamp.pdf
+                  // Get the second-to-last part which is the original filename
+                  return parts.length >= 2 ? parts[parts.length - 2] : 'Resume.pdf'
+                })()}
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                Uploaded on {new Date().toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleResumeDownload}
+                disabled={uploading || localSaving || isSaving}
+                title="Download Resume"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={handleRemove}
+                disabled={uploading || localSaving || isSaving}
+                title="Delete Resume"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </Button>
+            </div>
+          </div>
         </div>
       )}
-
-      <Button type="submit" disabled={uploading || localSaving || isSaving || !resumeUrl}>
-        {(uploading || localSaving) ? "Saving..." : "Save"}
-      </Button>
-    </form>
+    </div>
   )
 }

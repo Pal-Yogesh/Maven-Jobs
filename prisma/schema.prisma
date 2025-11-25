@@ -101,7 +101,10 @@ model Education {
 
   degree    String
   institute String
-  year      String
+  from      String?
+  to        String?
+  current   Boolean @default(false)
+  description String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
